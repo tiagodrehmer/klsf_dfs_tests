@@ -354,65 +354,8 @@ errorr(GRBenv *env){
 	exit(1);
 }
 
-VNS 
-start_alg(int V, int L, int k){
-
-	VNS vns;
-	vns.it_find_best = 0;
-	int error = GRBloadenv(&vns.env, "solver.log");
-	if (error) errorr(vns.env);
-	vns.max_in_solution = MAX_IN_SOLUTION;
-	vns.iteracao = 0;
-	vns.ponderamento = (int*) malloc(L * sizeof(int));
-	vns.best_know = (int*) malloc(k*sizeof(int));
-	vns.bool_labels = (int*) malloc(L*sizeof(int));
-	vns.qtd_labels_sub = 0;
-	vns.qtd_fixed = (int) floor(k * FRAC_FIX);
-	if(k == vns.qtd_fixed){
-		vns.qtd_fixed --;
-	}
-	vns.labels_fixed = (int*) malloc(vns.qtd_fixed * sizeof(int));
-	vns.labels_sub = (int*) malloc(L * sizeof(int));
-	vns.solution_now = (int*) malloc(k*sizeof(int));
-	vns.bool_solution = (int*) malloc(k*sizeof(int));
-	vns.best = V;
-	vns.solution_value = V;
-	vns.time = time(NULL);
-	vns.it_in_solution = 0;
 
 
-	vns.total_pond = 0;
-	for(int i = 0; i < L ; i++){
-		vns.labels_sub[i] = -1;
-	}
-
-	for(int i = 0; i < vns.qtd_fixed; i++){
-		vns.labels_fixed[i] = 0;
-	}
-
-	for(int i = 0; i < L; i++){
-		vns.ponderamento[i] = MAX_POND;
-		vns.bool_labels[i] = vns.iteracao;
-	}
-	vns.total_pond = k * MAX_POND;
-
-	int cont_l = 0, r;
-
-	while(cont_l < k){
-		r = rand()%L;
-		while(vns.bool_labels[r] != vns.iteracao){
-			r = rand()%L;
-		}
-		vns.bool_labels[r] = vns.iteracao;
-		vns.solution_now[cont_l] = r;
-		vns.bool_solution[cont_l] = -1;
-		vns.best_know[cont_l] = r;
-		cont_l += 1;
-	}
-		
-	
-	return(vns);
-}
 
 
 
@@ -442,15 +385,6 @@ void finish_comps(COMPS *comps, int V){
 	}
 }
 
-void printa_comps(COMPS *comps, int V){
-	for(int i = 0; i < V; i++){
-		printf("\n %d: ", comps[i].qtd_vs);
-		for(int j = 0; j < V; j++){
-			printf("%d ", comps[i].index_vs[j]);
-		}
-	}
-}
-
 
 void fix_labels(int* visitados, COMPS* comps, Labels label, int *V){
 	int v1, v2, aux;
@@ -458,7 +392,6 @@ void fix_labels(int* visitados, COMPS* comps, Labels label, int *V){
 		v1 = label.es[i].v1;
 		v2 = label.es[i].v2;
 		if(visitados[v1] != visitados[v2]){
-			
 			if(visitados[v1] < visitados[v2]){
 				aux = visitados[v1];
 				v2 = visitados[v2];
@@ -489,6 +422,80 @@ void fix_labels(int* visitados, COMPS* comps, Labels label, int *V){
 
 }
 
+void count_edges_of_label(int* visitados, Labels label, int *max, int* id_max, int id_test, int V, int (*m_adj)[V], int it){
+	int v1, v2, aux = 0;
+	for(int i = 0; i < label.qtd_edges; i++){
+		v1 = label.es[i].v1;
+		v2 = label.es[i].v2;
+		if(visitados[v1] != visitados[v2] && m_adj[visitados[v1]][visitados[v2]] != it){
+			aux += 1;
+			m_adj[visitados[v1]][visitados[v2]] = it;
+		}
+	}
+	if(aux > *max){
+		*id_max = id_test;
+		*max = aux;
+	}	
+}
+
+
+
+
+
+
+
+void 
+generate_first_solution(VNS *vns, Problem G){
+	int max = 0, id_max = -1, i = 0, j =0;
+	for(i = 0; i < G.L; i++){
+		if(G.edges_per_label[i].qtd_edges > max){
+			max = G.edges_per_label[i].qtd_edges ;
+			id_max = i;
+ 		} 		
+	}
+
+	COMPS *comps = init_comps(G.V);
+	
+	int visitados[G.V];
+	int m_adj[G.V][G.V];
+
+	for(i = 0; i < G.V; i++){
+		for(j = 0; j < G.V; j++)
+			m_adj[i][j] = 0;
+		visitados[i] = i;
+	}
+
+	int _ = G.V, aux = 0;
+
+	for(i = 0; i < G.k; i++ ){
+		fix_labels(visitados, comps, G.edges_per_label[id_max], &_);
+		vns->bool_labels[id_max] = vns->iteracao;
+		vns->solution_now[i] = id_max;
+		vns->bool_solution[i] = -1;
+		vns->best_know[i] = id_max;
+
+		for(j = 0; j < G.L; j++){
+			aux += 1;
+			if(vns->bool_labels[j] == -1)
+				count_edges_of_label(visitados, G.edges_per_label[j], &max, &id_max, j, G.V, m_adj, aux);
+		}
+	}
+
+	finish_comps(comps, G.V);
+}
+
+
+void printa_comps(COMPS *comps, int V){
+	for(int i = 0; i < V; i++){
+		printf("\n %d: ", comps[i].qtd_vs);
+		for(int j = 0; j < V; j++){
+			printf("%d ", comps[i].index_vs[j]);
+		}
+	}
+}
+
+
+
 void add_edges_of_label(int* visitados, Labels label, int *unique_edges, Problem* P, int(*m_adj)[P->V]){
 	if(P->L == 0){
 		P->edges_per_label = (Labels*) malloc((P->L+1) * sizeof(Labels));
@@ -515,7 +522,6 @@ void add_edges_of_label(int* visitados, Labels label, int *unique_edges, Problem
 		}
 	}
 	P->L++;
-
 }
 
 
@@ -981,6 +987,58 @@ from_solver_to_vns(VNS *vns, double *solution, int flag){
 }
 
 
+VNS 
+start_alg(Problem G){
+
+	VNS vns;
+	vns.it_find_best = 0;
+	int error = GRBloadenv(&vns.env, "solver.log");
+	if (error) errorr(vns.env);
+	vns.max_in_solution = MAX_IN_SOLUTION;
+	vns.iteracao = 0;
+	vns.ponderamento = (int*) malloc(G.L * sizeof(int));
+	vns.best_know = (int*) malloc(G.k*sizeof(int));
+	vns.bool_labels = (int*) malloc(G.L*sizeof(int));
+	vns.qtd_labels_sub = 0;
+	vns.qtd_fixed = (int) floor(G.k * FRAC_FIX);
+	if(G.k == vns.qtd_fixed){
+		vns.qtd_fixed --;
+	}
+	vns.labels_fixed = (int*) malloc(vns.qtd_fixed * sizeof(int));
+	vns.labels_sub = (int*) malloc(G.L * sizeof(int));
+	vns.solution_now = (int*) malloc(G.k*sizeof(int));
+	vns.bool_solution = (int*) malloc(G.k*sizeof(int));
+	vns.best = G.V;
+	vns.solution_value = G.V;
+	vns.time = time(NULL);
+	vns.it_in_solution = 0;
+
+
+	vns.total_pond = 0;
+	for(int i = 0; i < G.L ; i++){
+		vns.labels_sub[i] = -1;
+	}
+
+	for(int i = 0; i < vns.qtd_fixed; i++){
+		vns.labels_fixed[i] = 0;
+	}
+
+	for(int i = 0; i < G.L; i++){
+		vns.ponderamento[i] = MAX_POND;
+		vns.bool_labels[i] = -1;
+	}
+	vns.total_pond = G.k * MAX_POND;
+
+	int cont_l = 0, r;
+
+	generate_first_solution(&vns, G);
+	
+	return(vns);
+}
+
+
+
+
 int main(int argc, char **argv){
 
 	double result = 0;
@@ -1023,7 +1081,7 @@ int main(int argc, char **argv){
 	MAX_ITERATION = G.k * mult;
 
 	int sol_to_avaliation[G.L];
-	vns = start_alg(G.V, G.L, G.k);
+	vns = start_alg(G);
 
 	double solution_solver[G.L];
 	for(int i = 0; i < G.L; i++){
