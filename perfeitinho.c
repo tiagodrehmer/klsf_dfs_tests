@@ -422,22 +422,6 @@ void fix_labels(int* visitados, COMPS* comps, Labels label, int *V){
 
 }
 
-void count_edges_of_label(int* visitados, Labels label, int *max, int* id_max, int id_test, int V, int (*m_adj)[V], int it){
-	int v1, v2, aux = 0;
-	for(int i = 0; i < label.qtd_edges; i++){
-		v1 = label.es[i].v1;
-		v2 = label.es[i].v2;
-		if(visitados[v1] != visitados[v2] && m_adj[visitados[v1]][visitados[v2]] != it){
-			aux += 1;
-			m_adj[visitados[v1]][visitados[v2]] = it;
-		}
-	}
-	if(aux > *max){
-		*id_max = id_test;
-		*max = aux;
-	}	
-}
-
 
 
 
@@ -446,42 +430,38 @@ void count_edges_of_label(int* visitados, Labels label, int *max, int* id_max, i
 
 void 
 generate_first_solution(VNS *vns, Problem G){
-	int max = 0, id_max = -1, i = 0, j =0;
-	for(i = 0; i < G.L; i++){
-		if(G.edges_per_label[i].qtd_edges > max){
-			max = G.edges_per_label[i].qtd_edges ;
-			id_max = i;
- 		} 		
-	}
-
-	COMPS *comps = init_comps(G.V);
+	int min = G.V, id_min = -1, i = 0, j =0;
 	
-	int visitados[G.V];
-	int m_adj[G.V][G.V];
+	int solution[G.L];
 
-	for(i = 0; i < G.V; i++){
-		for(j = 0; j < G.V; j++)
-			m_adj[i][j] = 0;
-		visitados[i] = i;
+	for(i = 0; i < G.L; i++){
+		solution[i] = 0;
 	}
 
-	int _ = G.V, aux = 0;
+	vns->best = G.V;
+	double result;
 
 	for(i = 0; i < G.k; i++ ){
-		fix_labels(visitados, comps, G.edges_per_label[id_max], &_);
-		vns->bool_labels[id_max] = vns->iteracao;
-		vns->solution_now[i] = id_max;
-		vns->bool_solution[i] = -1;
-		vns->best_know[i] = id_max;
-
+		result = vns->best;
 		for(j = 0; j < G.L; j++){
-			aux += 1;
-			if(vns->bool_labels[j] == -1)
-				count_edges_of_label(visitados, G.edges_per_label[j], &max, &id_max, j, G.V, m_adj, aux);
+			if(solution[j] == 0){
+				solution[j] = 1;
+				result = avalia_solution(solution, G);
+				if(min > result){
+					id_min = j;
+					min = result;
+				}
+				solution[j] = 0;
+			}
 		}
+		solution[id_min] = 1;
+		vns->bool_labels[id_min] = vns->iteracao;
+		vns->solution_now[i] = id_min;
+		vns->bool_solution[i] = -1;
+		vns->best_know[i] = id_min;
+		vns->best = min;
 	}
 
-	finish_comps(comps, G.V);
 }
 
 
