@@ -1057,6 +1057,7 @@ int main(int argc, char **argv){
 	FRAC_FIX = atof(argv[5]); 
 	FRAC_SUB_FICA = atof(argv[6]);
 	MAX_POND = atoi(argv[7]);
+	int flaaag = atoi(argv[8]);
 	
 	MAX_ITERATION = G.k * mult;
 
@@ -1135,13 +1136,14 @@ int main(int argc, char **argv){
 	// }
 
 
-	char file_saida[50];
-	snprintf(file_saida, sizeof(file_saida), "saidas/saida_%d_%d_%.2lf_%.2lf_%d", mult, MAX_IN_SOLUTION, FRAC_FIX, FRAC_SUB_FICA, MAX_POND);
-	saida = fopen(file_saida, "a");	
-	fprintf(saida, "%s:%ld:%.0lf:%d\n", argv[1], time(NULL) - vns.time, vns.best, vns.it_find_best);	
-	fclose(saida);
+	if(flaaag){
+		char file_saida[50];
+		snprintf(file_saida, sizeof(file_saida), "saidas/saida_%d_%d_%.2lf_%.2lf_%d", mult, MAX_IN_SOLUTION, FRAC_FIX, FRAC_SUB_FICA, MAX_POND);
+		saida = fopen(file_saida, "a");	
+		fprintf(saida, "%s:%ld:%.0lf:%d\n", argv[1], time(NULL) - vns.time, vns.best, vns.it_find_best);	
+		fclose(saida);
+	}
 	printf("\nBest %f", vns.best);
-	
 	finish_problem(&G); 
 	finish_vns(&vns);
 
