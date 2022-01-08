@@ -422,22 +422,6 @@ void fix_labels(int* visitados, COMPS* comps, Labels label, int *V){
 
 }
 
-void count_edges_of_label(int* visitados, Labels label, int *max, int* id_max, int id_test, int V, int (*m_adj)[V], int it){
-	int v1, v2, aux = 0;
-	for(int i = 0; i < label.qtd_edges; i++){
-		v1 = label.es[i].v1;
-		v2 = label.es[i].v2;
-		if(visitados[v1] != visitados[v2] && m_adj[visitados[v1]][visitados[v2]] != it){
-			aux += 1;
-			m_adj[visitados[v1]][visitados[v2]] = it;
-		}
-	}
-	if(aux > *max){
-		*id_max = id_test;
-		*max = aux;
-	}	
-}
-
 
 
 
@@ -446,42 +430,38 @@ void count_edges_of_label(int* visitados, Labels label, int *max, int* id_max, i
 
 void 
 generate_first_solution(VNS *vns, Problem G){
-	int max = 0, id_max = -1, i = 0, j =0;
-	for(i = 0; i < G.L; i++){
-		if(G.edges_per_label[i].qtd_edges > max){
-			max = G.edges_per_label[i].qtd_edges ;
-			id_max = i;
- 		} 		
-	}
-
-	COMPS *comps = init_comps(G.V);
+	int min = G.V, id_min = -1, i = 0, j =0;
 	
-	int visitados[G.V];
-	int m_adj[G.V][G.V];
+	int solution[G.L];
 
-	for(i = 0; i < G.V; i++){
-		for(j = 0; j < G.V; j++)
-			m_adj[i][j] = 0;
-		visitados[i] = i;
+	for(i = 0; i < G.L; i++){
+		solution[i] = 0;
 	}
 
-	int _ = G.V, aux = 0;
+	vns->best = G.V;
+	double result;
 
 	for(i = 0; i < G.k; i++ ){
-		fix_labels(visitados, comps, G.edges_per_label[id_max], &_);
-		vns->bool_labels[id_max] = vns->iteracao;
-		vns->solution_now[i] = id_max;
-		vns->bool_solution[i] = -1;
-		vns->best_know[i] = id_max;
-
+		result = vns->best;
 		for(j = 0; j < G.L; j++){
-			aux += 1;
-			if(vns->bool_labels[j] == -1)
-				count_edges_of_label(visitados, G.edges_per_label[j], &max, &id_max, j, G.V, m_adj, aux);
+			if(solution[j] == 0){
+				solution[j] = 1;
+				result = avalia_solution(solution, G);
+				if(min > result){
+					id_min = j;
+					min = result;
+				}
+				solution[j] = 0;
+			}
 		}
+		solution[id_min] = 1;
+		vns->bool_labels[id_min] = vns->iteracao;
+		vns->solution_now[i] = id_min;
+		vns->bool_solution[i] = -1;
+		vns->best_know[i] = id_min;
+		vns->best = min;
 	}
 
-	finish_comps(comps, G.V);
 }
 
 
@@ -1077,6 +1057,7 @@ int main(int argc, char **argv){
 	FRAC_FIX = atof(argv[5]); 
 	FRAC_SUB_FICA = atof(argv[6]);
 	MAX_POND = atoi(argv[7]);
+	int flaaag = atoi(argv[8]);
 	
 	MAX_ITERATION = G.k * mult;
 
@@ -1155,13 +1136,14 @@ int main(int argc, char **argv){
 	// }
 
 
-	char file_saida[50];
-	snprintf(file_saida, sizeof(file_saida), "saidas/saida_%d_%d_%.2lf_%.2lf_%d", mult, MAX_IN_SOLUTION, FRAC_FIX, FRAC_SUB_FICA, MAX_POND);
-	saida = fopen(file_saida, "a");	
-	fprintf(saida, "%s:%ld:%.0lf:%d\n", argv[1], time(NULL) - vns.time, vns.best, vns.it_find_best);	
-	fclose(saida);
+	if(flaaag){
+		char file_saida[50];
+		snprintf(file_saida, sizeof(file_saida), "saidas/saida_%d_%d_%.2lf_%.2lf_%d", mult, MAX_IN_SOLUTION, FRAC_FIX, FRAC_SUB_FICA, MAX_POND);
+		saida = fopen(file_saida, "a");	
+		fprintf(saida, "%s:%ld:%.0lf:%d\n", argv[1], time(NULL) - vns.time, vns.best, vns.it_find_best);	
+		fclose(saida);
+	}
 	printf("\nBest %f", vns.best);
-	
 	finish_problem(&G); 
 	finish_vns(&vns);
 
