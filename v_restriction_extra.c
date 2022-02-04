@@ -429,7 +429,7 @@ void fix_labels(int* visitados, COMPS* comps, Labels label, int *V){
 
 
 void 
-MVCA(VNS *vns, Problem G, int flag){
+generate_first_solution(VNS *vns, Problem G){
 	int min = G.V, id_min = -1, i = 0, j =0;
 	
 	int solution[G.L];
@@ -441,15 +441,8 @@ MVCA(VNS *vns, Problem G, int flag){
 	vns->best = G.V;
 	double result;
 
-	if(flag == 0){
-		for(i = 0; i < G.k; i++ ){
-			solution[vns->solution_now[i]] = -1;
-		}
-	}
-
 	for(i = 0; i < G.k; i++ ){
-		result = vns->solution_value;
-		
+		result = vns->best;
 		for(j = 0; j < G.L; j++){
 			if(solution[j] == 0){
 				solution[j] = 1;
@@ -461,16 +454,12 @@ MVCA(VNS *vns, Problem G, int flag){
 				solution[j] = 0;
 			}
 		}
-
 		solution[id_min] = 1;
 		vns->bool_labels[id_min] = vns->iteracao;
 		vns->solution_now[i] = id_min;
 		vns->bool_solution[i] = -1;
-		if(flag){
-			vns->best_know[i] = id_min;
-			vns->best = min;
-		}
-		vns->solution_value  = min;
+		vns->best_know[i] = id_min;
+		vns->best = min;
 	}
 
 }
@@ -1035,7 +1024,7 @@ start_alg(Problem G){
 
 	int cont_l = 0, r;
 
-	MVCA(&vns, G, 1);
+	generate_first_solution(&vns, G);
 	
 	return(vns);
 }
@@ -1078,10 +1067,9 @@ int main(int argc, char **argv){
 	srand(atoi(argv[2]));
 	int mult = atoi(argv[3]);
 	float mult2 = atof(argv[4]); //1017
-	FRAC_FIX = atof(argv[5]); 
+	FRAC_FIX = 0.8;
+	MAX_POND = atoi(argv[5]);
 	int flaaag = atoi(argv[6]);
-	FRAC_SUB_FICA = 0.8;
-	MAX_POND = 1;
 	MAX_IN_SOLUTION = floor(G.k * mult2);
 	MAX_ITERATION = G.k * mult;
 
@@ -1097,9 +1085,12 @@ int main(int argc, char **argv){
 		while(it < MAX_ITERATION && (time(NULL) - vns.time) < 300){
 			vns.iteracao++;
 			
+			if(vns.it_in_solution % vns.max_in_solution == 0)
+				FRAC_SUB_FICA = 0.1;
+			else
+				FRAC_SUB_FICA = 0.8;
 
-
-
+			
 			sub = gera_sub_h(&vns,  G);
 
 			//printa_infos(vns, sub.V, sub.E, sub.L, sub.k);
@@ -1107,14 +1098,14 @@ int main(int argc, char **argv){
 
 
 
-			if(vns.it_in_solution > vns.max_in_solution)
+			if(vns.it_in_solution % vns.max_in_solution == 0)
 				result = generate_model_and_solve(vns.qtd_labels_sub, sub, solution_solver, vns.env, 0);
 			else
 				result = generate_model_and_solve(vns.qtd_labels_sub, sub, solution_solver, vns.env, vns.solution_value);
 
 			result = round(result) + 1; 
 
-			if(result < vns.solution_value && result > 0.1){
+			if(result <= vns.solution_value && result > 0.1){
 				vns.solution_value = round(result);
 				if(vns.solution_value < vns.best){	
 					from_solver_to_vns(&vns, solution_solver, 1);
@@ -1128,19 +1119,16 @@ int main(int argc, char **argv){
 				}else{
 					from_solver_to_vns(&vns, solution_solver, 0);	
 				}
-				vns.it_in_solution = 0;				
+				vns.it_in_solution = 0;
+				
 				
 			}else{
 				vns.it_in_solution ++;
-				if(vns.it_in_solution > MAX_IN_SOLUTION){
-					MVCA(&vns, G, 0);
-					vns.it_in_solution = 0;
-				}	
-				// if(vns.it_in_solution > MAX_IN_SOLUTION){
-				// 	//vns.max_in_solution += MAX_IN_SOLUTION;
-				// 	vns.solution_value = result;
-				// 	from_solver_to_vns(&vns, solution_solver, 0);
-				// }
+				if(vns.it_in_solution % vns.max_in_solution == 0){
+					//vns.max_in_solution += MAX_IN_SOLUTION;
+					vns.solution_value = result;
+					from_solver_to_vns(&vns, solution_solver, 0);
+				}
 				// else if(((vns.it_in_solution + 1) % (MAX_IN_SOLUTION * 5) == 0)){
 				// 	from_best_to_vns(&vns, G.k);
 				// 	vns.it_in_solution = 0;
