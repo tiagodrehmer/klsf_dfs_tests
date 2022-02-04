@@ -890,15 +890,16 @@ double generate_model_and_solve(int qtd_labels_sub, Problem sub_h, double*soluti
 		if (error) errorr(env);
 	}
 
-	sprintf(name, "cores");
+	sprintf(name, "extra");
 	if(best){
 		error = GRBaddconstr(model, sub_h.L - qtd_labels_sub, ind_extra, val_extra, GRB_LESS_EQUAL, best, name);
 		if (error) errorr(env);
 	}
-
+	sprintf(name, "cores");
 	error = GRBaddconstr(model, qtd_labels_sub, ind, val, GRB_LESS_EQUAL, sub_h.k, name);
 	if (error) errorr(env);
-  	error = GRBaddconstr(model, sub_h.L, ind2, val2, GRB_GREATER_EQUAL, sub_h.V-1, name);
+  	sprintf(name, "v-1");
+	error = GRBaddconstr(model, sub_h.L, ind2, val2, GRB_GREATER_EQUAL, sub_h.V-1, name);
 	if (error) errorr(env);
   	
   	//error = GRBwrite(model, "model.rlp.gz");
@@ -937,6 +938,7 @@ double generate_model_and_solve(int qtd_labels_sub, Problem sub_h, double*soluti
   			}
   			solution[r] = 1;
   		}
+
   	}
 
 
@@ -1064,12 +1066,12 @@ int main(int argc, char **argv){
 	
 	srand(atoi(argv[2]));
 	int mult = atoi(argv[3]);
-	MAX_IN_SOLUTION = atoi(argv[4]); //1017
+	float mult2 = atof(argv[4]); //1017
 	FRAC_FIX = atof(argv[5]); 
 	FRAC_SUB_FICA = atof(argv[6]);
 	MAX_POND = atoi(argv[7]);
 	int flaaag = atoi(argv[8]);
-	
+	MAX_IN_SOLUTION = floor(G.k * mult2);
 	MAX_ITERATION = G.k * mult;
 
 	int sol_to_avaliation[G.L];
@@ -1083,14 +1085,24 @@ int main(int argc, char **argv){
 	if(vns.best > 1 && (time(NULL) - vns.time) < 300){
 		while(it < MAX_ITERATION && (time(NULL) - vns.time) < 300){
 			vns.iteracao++;
+			
+			if(vns.it_in_solution % vns.max_in_solution == 0)
+				FRAC_SUB_FICA = 0.1;
+			else
+				FRAC_SUB_FICA = 0.8;
+
+			
 			sub = gera_sub_h(&vns,  G);
 
 			//printa_infos(vns, sub.V, sub.E, sub.L, sub.k);
 			//printf("\n");
+
+
+
 			if(vns.it_in_solution % vns.max_in_solution == 0)
 				result = generate_model_and_solve(vns.qtd_labels_sub, sub, solution_solver, vns.env, 0);
 			else
-				result = generate_model_and_solve(vns.qtd_labels_sub, sub, solution_solver, vns.env, vns.best);
+				result = generate_model_and_solve(vns.qtd_labels_sub, sub, solution_solver, vns.env, vns.solution_value);
 
 			result = round(result) + 1; 
 
@@ -1153,7 +1165,7 @@ int main(int argc, char **argv){
 
 	if(flaaag){
 		char file_saida[50];
-		snprintf(file_saida, sizeof(file_saida), "saidas/saida_restr_%d_%d_%.2lf_%.2lf_%d", mult, MAX_IN_SOLUTION, FRAC_FIX, FRAC_SUB_FICA, MAX_POND);
+		snprintf(file_saida, sizeof(file_saida), "saidas/s_%d_%.2lf_%.2f_%d", mult, mult2,  FRAC_FIX, MAX_POND);
 		saida = fopen(file_saida, "a");	
 		fprintf(saida, "%s:%ld:%.0lf:%d\n", argv[1], time(NULL) - vns.time, vns.best, vns.it_find_best);	
 		fclose(saida);
