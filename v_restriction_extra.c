@@ -1097,10 +1097,9 @@ int main(int argc, char **argv){
 		while(it < MAX_ITERATION && (time(NULL) - vns.time) < 300){
 			vns.iteracao++;
 			
-			if(vns.it_in_solution > MAX_IN_SOLUTION)
-				MVCA(&vns, G, 0);
 
-				
+
+
 			sub = gera_sub_h(&vns,  G);
 
 			//printa_infos(vns, sub.V, sub.E, sub.L, sub.k);
@@ -1134,10 +1133,14 @@ int main(int argc, char **argv){
 			}else{
 				vns.it_in_solution ++;
 				if(vns.it_in_solution > MAX_IN_SOLUTION){
-					//vns.max_in_solution += MAX_IN_SOLUTION;
-					vns.solution_value = result;
-					from_solver_to_vns(&vns, solution_solver, 0);
-				}
+					MVCA(&vns, G, 0);
+					vns.it_in_solution = 0;
+				}	
+				// if(vns.it_in_solution > MAX_IN_SOLUTION){
+				// 	//vns.max_in_solution += MAX_IN_SOLUTION;
+				// 	vns.solution_value = result;
+				// 	from_solver_to_vns(&vns, solution_solver, 0);
+				// }
 				// else if(((vns.it_in_solution + 1) % (MAX_IN_SOLUTION * 5) == 0)){
 				// 	from_best_to_vns(&vns, G.k);
 				// 	vns.it_in_solution = 0;
