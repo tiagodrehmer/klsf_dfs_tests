@@ -6,18 +6,17 @@ MAX_POND="$5"
 
 
 SEED=1
-for INSTANCE in klsf_instances/*;
+while [ $SEED -lt 31 ];
 do
    echo "$INSTANCE"
-   SEED=1
-   while [ $SEED -lt 31 ];
+   for INSTANCE in klsf_instances/*;
    do 
       PART=0
-         echo "./p $INSTANCE $SEED $MULTIPLICADOR_ITERATION $MAX_IN_SOLUTION $FRAC_FIX $FRAC_SUB_FICA $MAX_POND"
-         ./p $INSTANCE $SEED $MULTIPLICADOR_ITERATION $MAX_IN_SOLUTION $FRAC_FIX $FRAC_SUB_FICA $MAX_POND
+         echo "./p $INSTANCE $SEED $MULTIPLICADOR_ITERATION $MAX_IN_SOLUTION $FRAC_FIX $FRAC_SUB_FICA $MAX_POND 1"
+         ./p $INSTANCE $SEED $MULTIPLICADOR_ITERATION $MAX_IN_SOLUTION $FRAC_FIX $FRAC_SUB_FICA $MAX_POND 1
          let PART=PART+1;
-      let SEED=SEED+1;
       echo "$SEED"
    done
+   let SEED=SEED+1;
 done
       
