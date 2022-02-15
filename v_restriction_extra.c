@@ -6,11 +6,6 @@
 #include <string.h>
 #include <math.h>
 
-// export GUROBI_HOME="gurobi912/linux64"
-// export PATH="${PATH}:${GUROBI_HOME}/bin"
-// export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib"
-
-// gcc -o p v_restriction_extra.c -I gurobi912/linux64/include/ -L gurobi912/linux64/lib/ -lgurobi91 -lm
 
 
 // #define MAX_ITERATION 1000 //1017
@@ -1068,6 +1063,7 @@ int main(int argc, char **argv){
 	int mult = atoi(argv[3]);
 	float mult2 = atof(argv[4]); //1017
 	FRAC_FIX = 0.8;
+	FRAC_SUB_FICA = 0.8;
 	MAX_POND = atoi(argv[5]);
 	int flaaag = atoi(argv[6]);
 	MAX_IN_SOLUTION = floor(G.k * mult2);
@@ -1085,11 +1081,6 @@ int main(int argc, char **argv){
 		while(it < MAX_ITERATION && (time(NULL) - vns.time) < 300){
 			vns.iteracao++;
 			
-			if(vns.it_in_solution % vns.max_in_solution == 0)
-				FRAC_SUB_FICA = 0.1;
-			else
-				FRAC_SUB_FICA = 0.8;
-
 			
 			sub = gera_sub_h(&vns,  G);
 
